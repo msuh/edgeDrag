@@ -6,6 +6,8 @@ This application purposely uses pure javascript and HTML5 canvas without any ext
 
 Each node is an iframe that contains the entire "iframe.html". 
 
+Deployed website: http://msuh.github.io/edgeDrag/
+
 Available Interactions:
 Create connection/edges from node to node
   -Cannot created an undirected edge, meaning edges can only be from one direction to the other indicated by the arrows
