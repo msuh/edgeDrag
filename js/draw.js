@@ -1,9 +1,15 @@
 //////////////// things to take care of.. ///////////////////
 /*
-1. Handling button overlap. are buttons allowed to be overlapped? I assume not
-2. Handle deletion. When button pressed is swiped across a link
+1. (no overlap) Handling button overlap. are buttons allowed to be overlapped? I assume not
+2. [Solved]  Handle deletion. When button pressed is swiped across a link 
 3. Double click to move around the button -- the mousedown gets registered before
 	the double click event is recognized.. how to solve this
+4. When a node become invisible (objectVisibility : false), then make an elastic
+    animation to go vertically up the screen from where the node is.. And the
+    link stays vertically up regardless of how the node is moved around
+5. Double click --> make a toggle button to switch between link drag and button drag
+6. [Solved] make the nodes an iframe object
+
 
 */
 ///////////////// constants and variables //////////////////
@@ -12,13 +18,13 @@ programmingLinksArray = [];
 programmingButtonArray = [];
 const buttonRad = 15; //in pixels
 const marg = 25;
-const marg2 = 20;
-
+const marg2 = 2;
+const buttonWidth = 47;
 
 /////////////////////////////////////////////////////////////
 ///////// initializing with random button and links /////////
 
-var pos = [[200, 200], [400, 200], [300, 350], [400, 400]];
+var pos = [[200, 200], [400, 200], [300, 350], [400, 400], [500, 260]];
 for(var i=0; i < pos.length; i++){
 	var a = new programmingButton();
 	a.id = i+1;
@@ -29,7 +35,7 @@ for(var i=0; i < pos.length; i++){
 	programmingButtonArray.push(a);
 }
 var a = new programmingLinks();
-a.id = 1; a.idLinkSideA = 1; a.idLinkSideB = 3;
+a.id = 1; a.locationInA = 1; a.locationInB = 3;
 programmingLinksArray.push(a);
 
 
@@ -46,13 +52,38 @@ function programmingButton() {
         objectVisibility: true
 	}
 }
+// constructors for the links.
+function programmingButton2() {
+    this.id = '';
+    this.name = '';
+    this.value = null;
+    this.rotation = 0;
+    this.x = 0;
+    this.y = 0;
+    this.scale = 0;
+    this.plugin = "default";
+    this.pluginParameter = null;
+    this.objectVisibility = true;
+    // this.position = {
+    //     position2dX:0,
+    //     position2dY:0,
+    //     positionZfor2dScale:0,
+    //     objectVisibility: true
+    // }
+}
 function programmingLinks() {
 	this.id = '';
-    this.idLinkSideA = '';
-    this.idLinkSideB = '';
+    this.ObjectA = '';
+    this.locationInA = '';
+    this.ObjectB = '';
+    this.locationInB = '';
 }
 
 function addLink(l){
+    if(l.locationInA == null){
+        console.log("LINK SIDE A IS NULL ---------- NOT ADDING",l);
+        return;
+    }
 	programmingLinksArray.push(l);
 }
 
@@ -112,10 +143,10 @@ function checkButton(x, y){
 function checkRepeatLink(id1,id2){
 	for(var i = 0; i<programmingLinksArray.length;i++) {
 		var l = programmingLinksArray[i];
-		if(l.idLinkSideA == id1 && l.idLinkSideB == id2){
+		if(l.locationInA == id1 && l.locationInB == id2){
 			return false;
 		}
-		if(l.idLinkSideA == id2 && l.idLinkSideB == id1){
+		if(l.locationInA == id2 && l.locationInB == id1){
 			return false;
 		}
 	}
@@ -127,18 +158,31 @@ function drawAll(context, w, h){
 
     for(var i = 0; i<programmingLinksArray.length;i++) {
     	var l = programmingLinksArray[i];
-    	var posA = getButtonPoint(l.idLinkSideA),
-    		posB = getButtonPoint(l.idLinkSideB);
+    	var posA = getButtonPoint(l.locationInA),
+    		posB = getButtonPoint(l.locationInB);
         if(posA === undefined || posB === undefined){ 
         	continue; //should not be undefined
         }
         drawLine(context, posA[0], posA[1], posB[0], posB[1]);
     }
+    // for(var i = 0; i<programmingButtonArray.length;i++) {
+    // 	var b = programmingButtonArray[i];
+    // 	// drawButton(context, b.position.position2dX, b.position.position2dY);
+    //     drawButton2(context, b.id, b.position.position2dX, b.position.position2dY);
+    // }
+}
+
+//function for adding all the buttons
+function addAllButtons(){
+    // clearHTML();
     for(var i = 0; i<programmingButtonArray.length;i++) {
-    	var b = programmingButtonArray[i];
-    	drawButton(context, b.position.position2dX, b.position.position2dY);
+        var b = programmingButtonArray[i];
+        // drawButton(context, b.position.position2dX, b.position.position2dY);
+        drawButton2(b.id, b.position.position2dX, b.position.position2dY);
     }
 }
+
+
 //draws the button with given context of canvas and center x,y positions
 function drawButton(context, x, y){
 	context.beginPath();
@@ -148,6 +192,51 @@ function drawButton(context, x, y){
 	context.lineWidth = 2;
 	context.strokeStyle = '#D5D8CA';
 	context.stroke();
+}
+
+//makes an iframe for each button
+function drawButton2(id, x, y){
+    // var iframe = '<iframe src="iframe.html" left="'+x+'" top="'+y+'" width="0" height="0" id="'+id+'" frameborder="0" onLoad="autoResize("'+id+'");"></iframe>';
+    //creating iframe object
+    var iframe = document.createElement("iframe");
+    iframe.setAttribute("src","iframe.html");
+    iframe.setAttribute("id",id);
+    iframe.setAttribute("class","iframe");
+    iframe.setAttribute("width",buttonWidth);
+    iframe.setAttribute("height",buttonWidth);
+    iframe.setAttribute("draggable",true);
+    iframe.style.left = x-buttonWidth/2+'px';
+    iframe.style.top = y-buttonWidth/2+'px';
+    // iframe.setAttribute("onLoad", autoResize(id));
+
+    document.getElementById("nodes").appendChild(iframe);
+}
+
+function reDrawButton(id, x, y){
+    var iframe = document.getElementById(id);
+    iframe.style.left = x-buttonWidth/2+'px';
+    iframe.style.top = y-buttonWidth/2+'px';
+}
+
+function clearHTML(){
+    document.getElementById("nodes").innerHTML = '';
+}
+//function to resize the iframe
+function autoResize(id){
+    var f = function(){
+        var newheight;
+        var newwidth;
+
+        if(document.getElementById){
+            newheight=document.getElementById(id).contentWindow.document.body.scrollHeight;
+            newwidth=document.getElementById(id).contentWindow.document.body.scrollWidth;
+        }
+        newheight = '15', newwidth = '15';
+        document.getElementById(id).height=(newheight);//+"px";
+        document.getElementById(id).width=(newwidth);//+"px";
+    }
+    return f;
+    
 }
 
 
@@ -168,7 +257,6 @@ function drawLine(context, x1, y1, x2, y2) {
     this.endPoint = [x2, y2];
     this.startWeight = 1;
     this.endWeight = 1;
-
 
         // calculating all needed values for drawing the line
         var pointweight2 = (this.startWeight * 3 / 4) + (this.endWeight / 4);
@@ -333,6 +421,19 @@ function drawLine(context, x1, y1, x2, y2) {
     
 }
 
+function drawDotLine(context, x1, y1, x2, y2) {
+    this.startPoint = [x1, y1];
+    this.endPoint = [x2, y2];
+        context.beginPath();
+        context.moveTo(this.startPoint[0], this.startPoint[1]);
+        context.lineTo(this.endPoint[0], this.endPoint[1]);
+        context.setLineDash([5]);
+        context.lineWidth = 1;
+        context.strokeStyle = "#00fdff";
+        context.stroke();
+        context.closePath();
+
+}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -341,6 +442,9 @@ function drawLine(context, x1, y1, x2, y2) {
 //function for calucating the slope of given points
 //slope has to be multiplied by -1 because the y-axis value increases we we go down
 var slopeCalc = function(x1, y1, x2, y2){
+    if((x1 - x2) == 0){
+        return 9999; //handle cases when slope is infinity
+    }
     return (y1-y2)/(x1-x2);
 }
 
@@ -349,6 +453,9 @@ var slopeCalc = function(x1, y1, x2, y2){
 //y = [(y1-y2)/(x1-x2), -(y1-y2)/(x1-x2)*x1 + y1]
 var lineEq = function(x1,y1,x2,y2){
     var m = slopeCalc(x1,y1,x2,y2);
+    // if(m == 'vertical'){
+    //     return ['vertical', 'vertical'];
+    // }
     return [m, -1*m*x1+y1];
 }
 
@@ -367,6 +474,7 @@ var calculateY=function(seg1, x){
 //given two end points of the segment and some other point p,
 //return true - if p is between thw two segment points,  false otherwise
 var checkBetween = function(e1, e2, p){
+    // console.log("e1,e2,p :",e1,e2,p);
     if(e1-marg2<=p && p<=e2+marg2){
         return true;
     }
@@ -390,7 +498,12 @@ return:  true if two segments cross,  false otherwise
 function checkLineCross(x11, y11, x12, y12, x21, y21, x22, y22, w, h){
     var l1 = lineEq(x11, y11, x12, y12),
         l2 = lineEq(x21, y21, x22, y22);
-    console.log("l1, l2",l1,l2);
+    // console.log("l1, l2",l1,l2);
+    // if(l1[0] == 'vertical'){
+
+    // }else{
+
+    // }
     var interX = calculateX(l1, l2); //calculate the intersection X value
     if(interX > w || interX < 0){
         return false; //false if intersection of lines is out of canvas
@@ -405,13 +518,15 @@ function checkLineCross(x11, y11, x12, y12, x21, y21, x22, y22, w, h){
         return false; //false if intersection of lines is out of canvas
     }
     console.log("point on line --- checking on segment now");
-    return (checkBetween(x11,x12,interX) && checkBetween(y11,y12,interY));
+    return (checkBetween(x11,x12,interX) && checkBetween(y11,y12,interY) 
+            & checkBetween(x21,x22,interX) && checkBetween(y21,y22,interY));
 }
 
 
 /*
   VERSION2
 ******* for checking the point in line every drag point **********  
+So that the edge will delete whenever it is cross regardless of mouseup
 */
 function checkPointinLine(x11,y11,x12,y12, px, py, h){
     var l1 = lineEq(x11, y11, x12, y12);
@@ -424,7 +539,8 @@ function checkPointinLine(x11,y11,x12,y12, px, py, h){
     }
     //at this point, the given point lies on the given line. But we need to 
     //check whether the point actually lies on the segment, not on the infinite line
-    return (checkBetween(x11,x12,px) && checkBetween(y11,y12,py));
+    return (checkBetween(x11,x12,interX) && checkBetween(y11,y12,interY) 
+            & checkBetween(x21,x22,interX) && checkBetween(y21,y22,interY));
 
 }
 
